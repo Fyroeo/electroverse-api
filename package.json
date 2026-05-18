@@ -1,0 +1,42 @@
+{
+  "name": "electroverse-api",
+  "version": "1.0.0",
+  "description": "TypeScript unofficial client library for Electroverse API",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "npx tsx examples/web-server.ts",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "generate": "graphql-codegen"
+  },
+  "keywords": [
+    "electroverse",
+    "graphql",
+    "client"
+  ],
+  "author": "Fyroeo",
+  "license": "ISC",
+  "dependencies": {
+    "@mapbox/vector-tile": "^2.0.4",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "graphql": "^16.14.0",
+    "graphql-request": "^7.4.0",
+    "pbf": "^4.0.1",
+    "playwright": "^1.60.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^7.0.0",
+    "@graphql-codegen/typescript": "^6.0.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/mapbox__vector-tile": "^1.3.4",
+    "@types/node": "^25.9.0",
+    "@types/pbf": "^3.0.5",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3"
+  }
+}

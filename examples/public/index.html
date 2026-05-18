@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electroverse Map Proxy Client</title>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <link href="style.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="sidebar" class="sidebar">
+        <div id="sidebar-content">
+            <h2>Electroverse Stations</h2>
+            <p>Click on any charging station pin on the map to fetch its real-time details, pricing, and connector status.</p>
+        </div>
+    </div>
+
+    <script>
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+            center: [2.3522, 48.8566], // Paris
+            zoom: 5
+        });
+
+        map.on('load', () => {
+            map.addSource('electroverse-stations', {
+                type: 'vector',
+                tiles: [
+                    window.location.origin + '/api/tiles/{z}/{x}/{y}'
+                ],
+                minzoom: 3,
+                maxzoom: 14
+            });
+
+            map.addLayer({
+                id: 'stations-layer',
+                type: 'circle',
+                source: 'electroverse-stations',
+                'source-layer': 'hits',
+                paint: {
+                    'circle-radius': [
+                        'interpolate', ['linear'], ['zoom'],
+                        5, 3,
+                        12, 8
+                    ],
+                    'circle-color': '#0ea5e9',
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
+
+            map.on('mouseenter', 'stations-layer', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', 'stations-layer', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            map.on('click', 'stations-layer', async (e) => {
+                if (!e.features || e.features.length === 0) return;
+                
+                const feature = e.features[0];
+                const pk = feature.id || feature.properties._id;
+                
+                if (!pk) return;
+
+                const sidebar = document.getElementById('sidebar-content');
+                sidebar.innerHTML = `
+                    <div class="loader"></div>
+                    <p>Fetching data for PK ${pk}...</p>
+                `;
+
+                const query = `
+                  query chargingLocation($pk: String!) {
+                    chargingLocation(pk: $pk) {
+                      name
+                      city
+                      operator {
+                        name
+                      }
+                      evses {
+                        totalCount
+                        edges {
+                          node {
+                            status
+                            connectors {
+                              edges {
+                                node {
+                                  kilowatts
+                                  speed
+                                  standard {
+                                    name
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `;
+
+                try {
+                    const response = await fetch('/api/graphql', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query, variables: { pk: String(pk) } })
+                    });
+                    
+                    if (!response.ok) throw new Error("Backend error");
+                    const data = await response.json();
+                    
+                    const location = data?.chargingLocation;
+                    if (!location) throw new Error("No data returned");
+
+                    let html = `
+                        <h2>${location.name}</h2>
+                        <p class="operator">${location.operator?.name || 'Unknown Operator'}</p>
+                        <p class="city">${location.city || ''}</p>
+                        
+                        <h3>Connectors (${location.evses?.totalCount || 0})</h3>
+                        <div class="connectors">
+                    `;
+
+                    location.evses?.edges?.forEach(edge => {
+                        const evse = edge.node;
+                        evse.connectors?.edges?.forEach(cEdge => {
+                            const connector = cEdge.node;
+                            html += `
+                                <div class="connector-card">
+                                    <div class="status ${evse.status?.toLowerCase()}">${evse.status || 'UNKNOWN'}</div>
+                                    <div class="speed">${connector.kilowatts} kW - ${connector.speed}</div>
+                                    <div class="type">${connector.standard?.name || ''}</div>
+                                </div>
+                            `;
+                        });
+                    });
+
+                    html += `</div>`;
+                    sidebar.innerHTML = html;
+
+                } catch (err) {
+                    sidebar.innerHTML = `
+                        <h2>Error</h2>
+                        <p class="error">Failed to fetch data: ${err.message}</p>
+                    `;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

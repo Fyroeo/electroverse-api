@@ -1,0 +1,139 @@
+"""
+WIP: Manually reverse engineered schema from running Electroverse
+"""
+
+type Query {
+  chargingLocation(pk: String): ChargingLocationMetadataType
+  locationPhotos(chargingLocation: String): [String!]
+}
+
+"""Represents the operating hours information for a charging location, detailing whether it's open continuously or has specific daily hours."""
+type BaseOpeningTimes {
+  """Details the specific daily opening and closing times for the charging location, applicable when it's not open 24/7."""
+  regularHours: String
+  """Indicates if the charging location is open 24 hours a day, 7 days a week."""
+  twentyFourSeven: Boolean
+}
+
+"""Represents an access card or payment card that is accepted or required at a charging location, potentially associated with a specific charging network or service. It details information about the card and related mobile applications."""
+type Card {
+  """The URL to download the associated Android mobile application, likely used for managing the card or charging service."""
+  androidAppUrl: String
+  """The URL to download the associated iOS mobile application, likely used for managing the card or charging service."""
+  iosAppUrl: String
+  """The name or type of the card, often indicating if it's a generic card (e.g., 'CARD' for a payment card) or a specific service's card."""
+  name: String
+  """The official website for the card's issuer or the associated charging service/network."""
+  site: String
+}
+
+type ChargingConnectorMetadataType {
+  isChargingFree: Boolean
+  kilowatts: Int
+  pk: Int
+  priceComponents: [ConsumptionRate!]
+  pricing: PricingType
+  speed: String
+  standard: EJNConnectorStandardType
+}
+
+"""Represents metadata and operational details for an Electric Vehicle Supply Equipment (EVSE) at a charging location."""
+type ChargingEVSEMetadataType {
+  """A connection to a list of available physical connectors on this EVSE, describing their types and capabilities."""
+  connectors: GenericConnectorConnectionTypeConnection
+  """A physical reference code or identifier for the EVSE, possibly its serial number or location ID."""
+  physicalReference: String
+  """A unique identifier for the EVSE."""
+  pk: Int
+  """The current operational status of the EVSE (e.g., 'AVAILABLE', 'OCCUPIED', 'OUT_OF_ORDER')."""
+  status: String
+  """Indicates whether this EVSE supports initiating and managing charging sessions directly through a mobile application."""
+  supportsInAppCharging: Boolean
+}
+
+type ChargingLocationMetadataType {
+  address: String
+  alerts: [String!]
+  capabilities: [Card!]
+  chargingLocationPk: String
+  city: String
+  coordinates: ChargingLocationMetadataType
+  country: String
+  evses: GenericEVSEConnectionTypeConnection
+  externalId: String
+  facilities: [String!]
+  isEjnLocation: Boolean
+  isFavourite: Boolean
+  locationFacilities: [String!]
+  name: String
+  openingHours: BaseOpeningTimes
+  operator: LocationOperatorType
+  pk: Int
+  postalCode: String
+}
+
+type ConsumptionRate {
+  currencyDetails: CurrencyType
+  perUnit: String
+  unitAmount: Int
+}
+
+type CurrencyType {
+  decimalDigits: Int
+  minorUnitConversion: Int
+  symbol: String
+}
+
+type EJNConnectorStandardType {
+  humanName: String
+  name: String
+  pk: Int
+}
+
+"""Represents a paginated list or connection of generic connector types available at an EVSE (Electric Vehicle Supply Equipment) at a charging location."""
+type GenericConnectorConnectionTypeConnection {
+  """A list of edges, where each edge typically contains a single generic connector type node and potentially pagination information."""
+  edges: [GenericConnectorConnectionTypeEdge!]
+}
+
+type GenericConnectorConnectionTypeEdge {
+  node: ChargingConnectorMetadataType
+}
+
+"""This type represents a collection or a paginated list of EVSE (Electric Vehicle Supply Equipment) connection types available at a charging location."""
+type GenericEVSEConnectionTypeConnection {
+  """A list of edges, where each edge typically contains information about a single EVSE connection type, often used for pagination."""
+  edges: [GenericEVSEConnectionTypeEdge!]
+  """The total number of EVSE connection types in this collection."""
+  totalCount: Int
+}
+
+"""Represents an edge in a connection of Electric Vehicle Supply Equipment (EVSE) information, typically used in paginated queries to wrap individual EVSE nodes."""
+type GenericEVSEConnectionTypeEdge {
+  """The actual EVSE metadata or details associated with this connection edge."""
+  node: ChargingEVSEMetadataType
+}
+
+"""This type represents a charging location operator, providing details about the company that manages the charging stations."""
+type LocationOperatorType {
+  """Indicates whether the operator has partnered locations."""
+  hasPartneredLocations: Boolean
+  """Indicates whether the operator uses green or renewable energy for their charging services."""
+  isGreenEnergy: Boolean
+  """The URL to the operator's logo, potentially for display on a dark background."""
+  logoDark: String
+  """The name of the charging location operator."""
+  name: String
+  """A unique identifier for the charging location operator."""
+  pk: Int
+  """The customer support email address for the operator."""
+  supportEmail: String
+  """The customer support phone number for the operator."""
+  supportPhoneNumber: String
+  """The URL to the operator's customer support website."""
+  supportWebsite: String
+}
+
+type PricingType {
+  discount: String
+}
