@@ -6,11 +6,11 @@ type Query {
   """Fetches metadata and details for a specific charging location using its primary key."""
   chargingLocation(pk: String): ChargingLocationMetadataType
   
-  """Retrieves a list of photo URLs associated with a specific charging location."""
-  locationPhotos(chargingLocation: String): [String!]
+  """Retrieves a list of photos associated with a specific charging location."""
+  locationPhotos(chargingLocation: String): [LocationPhotoType!]
   
   """Fetches available subscription offers and discounts, optionally including upcoming ones and filtering by variety."""
-  offers(includeUpcoming: Boolean!, varieties: [DiscountVariety!]): [OfferType!]
+  offers(includeUpcoming: Boolean!, varieties: [DiscountVariety!]): [DiscountInterface!]
 }
 
 type Mutation {
@@ -38,14 +38,8 @@ type RegularHoursType {
 
 """Represents an access card or payment card that is accepted or required at a charging location."""
 type Card {
-  """The URL to download the associated Android mobile application."""
-  androidAppUrl: String
-  """The URL to download the associated iOS mobile application."""
-  iosAppUrl: String
   """The name or type of the card."""
   name: String
-  """The official website for the card's issuer."""
-  site: String
 }
 
 """Represents metadata for a specific physical charging connector."""
@@ -173,7 +167,7 @@ type ConnectionFee {
 
 """Represents the Value Added Tax component of the price."""
 type VAT {
-  __typename: String
+  _empty: Boolean
 }
 
 """An alert or notice related to a charging location."""
@@ -297,7 +291,19 @@ type LocationOperatorType {
 """Wrapper for pricing information and active discounts."""
 type PricingType {
   """An active discount offer applied to the pricing, if any."""
-  discount: OfferType
+  discount: DiscountInterface
+}
+
+"""A single photo associated with a charging location."""
+type LocationPhotoType {
+  """The unique integer identifier of the photo."""
+  pk: Int
+  """The URL of the photo."""
+  photo: String
+  """When the photo was last updated."""
+  updatedAt: String
+  """The category/type of the photo."""
+  photoType: String
 }
 
 """The different categories of discounts available."""
@@ -308,9 +314,7 @@ enum DiscountVariety {
 }
 
 """An interface representing a common structure for all discount offers."""
-interface OfferType {
-  """A unique GraphQL ID for the offer."""
-  id: ID!
+interface DiscountInterface {
   """A unique integer identifier for the offer."""
   pk: Int
   """The display name of the offer or discount."""
@@ -326,8 +330,7 @@ interface OfferType {
 }
 
 """A discount that applies globally across the network."""
-type GlobalDiscountType implements OfferType {
-  id: ID!
+type GlobalDiscountType implements DiscountInterface {
   pk: Int
   name: String
   variety: DiscountVariety
@@ -337,8 +340,7 @@ type GlobalDiscountType implements OfferType {
 }
 
 """A discount provided as part of a premium subscription offer."""
-type SubscriptionOfferDiscountType implements OfferType {
-  id: ID!
+type SubscriptionOfferDiscountType implements DiscountInterface {
   pk: Int
   name: String
   variety: DiscountVariety
@@ -374,8 +376,7 @@ type PageInfo {
 }
 
 """A discount that applies to a specific country."""
-type CountryDiscountType implements OfferType {
-  id: ID!
+type CountryDiscountType implements DiscountInterface {
   pk: Int
   name: String
   variety: DiscountVariety

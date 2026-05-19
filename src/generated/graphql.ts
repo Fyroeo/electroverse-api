@@ -48,14 +48,8 @@ export type CapabilityType = Card | Contactless | EjnApp | Free | OperatorApp | 
 /** Represents an access card or payment card that is accepted or required at a charging location. */
 export type Card = {
   __typename?: 'Card';
-  /** The URL to download the associated Android mobile application. */
-  androidAppUrl?: Maybe<Scalars['String']['output']>;
-  /** The URL to download the associated iOS mobile application. */
-  iosAppUrl?: Maybe<Scalars['String']['output']>;
   /** The name or type of the card. */
   name?: Maybe<Scalars['String']['output']>;
-  /** The official website for the card's issuer. */
-  site?: Maybe<Scalars['String']['output']>;
 };
 
 /** Represents metadata for a specific physical charging connector. */
@@ -168,7 +162,7 @@ export type Contactless = {
 };
 
 /** A discount that applies to a specific country. */
-export type CountryDiscountType = OfferType & {
+export type CountryDiscountType = DiscountInterface & {
   __typename?: 'CountryDiscountType';
   /** The internal type of marketing campaign for this discount. */
   campaignType?: Maybe<CampaignType>;
@@ -176,7 +170,6 @@ export type CountryDiscountType = OfferType & {
   country?: Maybe<CountryType>;
   /** A paginated list of operators that participate in this country discount. */
   displayOperators?: Maybe<DisplayOperatorTypeConnection>;
-  id: Scalars['ID']['output'];
   name?: Maybe<Scalars['String']['output']>;
   pk?: Maybe<Scalars['Int']['output']>;
   rate?: Maybe<Scalars['Float']['output']>;
@@ -214,6 +207,22 @@ export type CurrencyType = {
   minorUnitConversion?: Maybe<Scalars['Int']['output']>;
   /** The display symbol for the currency (e.g., '£'). */
   symbol?: Maybe<Scalars['String']['output']>;
+};
+
+/** An interface representing a common structure for all discount offers. */
+export type DiscountInterface = {
+  /** The display name of the offer or discount. */
+  name?: Maybe<Scalars['String']['output']>;
+  /** A unique integer identifier for the offer. */
+  pk?: Maybe<Scalars['Int']['output']>;
+  /** The rate of the discount (e.g., 0.15 for 15% off). */
+  rate?: Maybe<Scalars['Float']['output']>;
+  /** The ISO datetime when the discount becomes valid. */
+  validFrom?: Maybe<Scalars['String']['output']>;
+  /** The ISO datetime when the discount expires. */
+  validTo?: Maybe<Scalars['String']['output']>;
+  /** The category or variety of the discount. */
+  variety?: Maybe<DiscountVariety>;
 };
 
 /** The different categories of discounts available. */
@@ -326,9 +335,8 @@ export type GenericEvseConnectionTypeEdge = {
 };
 
 /** A discount that applies globally across the network. */
-export type GlobalDiscountType = OfferType & {
+export type GlobalDiscountType = DiscountInterface & {
   __typename?: 'GlobalDiscountType';
-  id: Scalars['ID']['output'];
   name?: Maybe<Scalars['String']['output']>;
   pk?: Maybe<Scalars['Int']['output']>;
   rate?: Maybe<Scalars['Float']['output']>;
@@ -358,6 +366,19 @@ export type LocationOperatorType = {
   supportWebsite?: Maybe<Scalars['String']['output']>;
 };
 
+/** A single photo associated with a charging location. */
+export type LocationPhotoType = {
+  __typename?: 'LocationPhotoType';
+  /** The URL of the photo. */
+  photo?: Maybe<Scalars['String']['output']>;
+  /** The category/type of the photo. */
+  photoType?: Maybe<Scalars['String']['output']>;
+  /** The unique integer identifier of the photo. */
+  pk?: Maybe<Scalars['Int']['output']>;
+  /** When the photo was last updated. */
+  updatedAt?: Maybe<Scalars['String']['output']>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   /** Verifies the validity of an authentication or session token. */
@@ -367,24 +388,6 @@ export type Mutation = {
 
 export type MutationVerifyTokenArgs = {
   token?: InputMaybe<Scalars['String']['input']>;
-};
-
-/** An interface representing a common structure for all discount offers. */
-export type OfferType = {
-  /** A unique GraphQL ID for the offer. */
-  id: Scalars['ID']['output'];
-  /** The display name of the offer or discount. */
-  name?: Maybe<Scalars['String']['output']>;
-  /** A unique integer identifier for the offer. */
-  pk?: Maybe<Scalars['Int']['output']>;
-  /** The rate of the discount (e.g., 0.15 for 15% off). */
-  rate?: Maybe<Scalars['Float']['output']>;
-  /** The ISO datetime when the discount becomes valid. */
-  validFrom?: Maybe<Scalars['String']['output']>;
-  /** The ISO datetime when the discount expires. */
-  validTo?: Maybe<Scalars['String']['output']>;
-  /** The category or variety of the discount. */
-  variety?: Maybe<DiscountVariety>;
 };
 
 /** Indicates support for starting sessions via the operator's specific app. */
@@ -428,7 +431,7 @@ export type PriceComponentType = ConnectionFee | ConsumptionRate | ParkingTimeRa
 export type PricingType = {
   __typename?: 'PricingType';
   /** An active discount offer applied to the pricing, if any. */
-  discount?: Maybe<OfferType>;
+  discount?: Maybe<DiscountInterface>;
 };
 
 /** Indicates support for starting sessions by scanning a QR code. */
@@ -442,10 +445,10 @@ export type Query = {
   __typename?: 'Query';
   /** Fetches metadata and details for a specific charging location using its primary key. */
   chargingLocation?: Maybe<ChargingLocationMetadataType>;
-  /** Retrieves a list of photo URLs associated with a specific charging location. */
-  locationPhotos?: Maybe<Array<Scalars['String']['output']>>;
+  /** Retrieves a list of photos associated with a specific charging location. */
+  locationPhotos?: Maybe<Array<LocationPhotoType>>;
   /** Fetches available subscription offers and discounts, optionally including upcoming ones and filtering by variety. */
-  offers?: Maybe<Array<OfferType>>;
+  offers?: Maybe<Array<DiscountInterface>>;
 };
 
 
@@ -485,9 +488,8 @@ export type RegularHoursType = {
 };
 
 /** A discount provided as part of a premium subscription offer. */
-export type SubscriptionOfferDiscountType = OfferType & {
+export type SubscriptionOfferDiscountType = DiscountInterface & {
   __typename?: 'SubscriptionOfferDiscountType';
-  id: Scalars['ID']['output'];
   name?: Maybe<Scalars['String']['output']>;
   pk?: Maybe<Scalars['Int']['output']>;
   rate?: Maybe<Scalars['Float']['output']>;
@@ -516,7 +518,7 @@ export type TimeRate = {
 /** Represents the Value Added Tax component of the price. */
 export type Vat = {
   __typename?: 'VAT';
-  __typename?: Maybe<Scalars['String']['output']>;
+  _empty?: Maybe<Scalars['Boolean']['output']>;
 };
 
 /** The payload returned after verifying an authentication token. */
