@@ -3,128 +3,288 @@ WIP: Manually reverse engineered schema from running Electroverse
 """
 
 type Query {
+  """Fetches metadata and details for a specific charging location using its primary key."""
   chargingLocation(pk: String): ChargingLocationMetadataType
+  
+  """Retrieves a list of photo URLs associated with a specific charging location."""
   locationPhotos(chargingLocation: String): [String!]
+  
+  """Fetches available subscription offers and discounts, optionally including upcoming ones and filtering by variety."""
+  offers(includeUpcoming: Boolean!, varieties: [DiscountVariety!]): [OfferType!]
+}
+
+type Mutation {
+  """Verifies the validity of an authentication or session token."""
+  verifyToken(token: String): VerifyTokenPayload
 }
 
 """Represents the operating hours information for a charging location, detailing whether it's open continuously or has specific daily hours."""
 type BaseOpeningTimes {
   """Details the specific daily opening and closing times for the charging location, applicable when it's not open 24/7."""
-  regularHours: String
+  regularHours: [RegularHoursType!]
   """Indicates if the charging location is open 24 hours a day, 7 days a week."""
   twentyFourSeven: Boolean
 }
 
-"""Represents an access card or payment card that is accepted or required at a charging location, potentially associated with a specific charging network or service. It details information about the card and related mobile applications."""
+"""Defines a specific time period on a given weekday when the location is open."""
+type RegularHoursType {
+  """The day of the week (e.g., 1 for Monday, 7 for Sunday)."""
+  weekday: Int
+  """The time the location opens, usually in HH:MM format."""
+  periodBegin: String
+  """The time the location closes, usually in HH:MM format."""
+  periodEnd: String
+}
+
+"""Represents an access card or payment card that is accepted or required at a charging location."""
 type Card {
-  """The URL to download the associated Android mobile application, likely used for managing the card or charging service."""
+  """The URL to download the associated Android mobile application."""
   androidAppUrl: String
-  """The URL to download the associated iOS mobile application, likely used for managing the card or charging service."""
+  """The URL to download the associated iOS mobile application."""
   iosAppUrl: String
-  """The name or type of the card, often indicating if it's a generic card (e.g., 'CARD' for a payment card) or a specific service's card."""
+  """The name or type of the card."""
   name: String
-  """The official website for the card's issuer or the associated charging service/network."""
+  """The official website for the card's issuer."""
   site: String
 }
 
+"""Represents metadata for a specific physical charging connector."""
 type ChargingConnectorMetadataType {
+  """Indicates if charging from this connector is currently free of charge."""
   isChargingFree: Boolean
+  """The maximum power output of the connector in kilowatts (kW)."""
   kilowatts: Int
+  """A unique identifier for the connector."""
   pk: Int
-  priceComponents: [ConsumptionRate!]
+  """A list of pricing components detailing the cost structure for using this connector."""
+  priceComponents: [PriceComponentType!]
+  """Pricing information including applicable discounts."""
   pricing: PricingType
-  speed: String
+  """The speed category of the connector (e.g., 'FAST', 'RAPID')."""
+  speed: ConnectorSpeed
+  """The physical standard or plug type of the connector (e.g., Type 2, CCS)."""
   standard: EJNConnectorStandardType
 }
 
 """Represents metadata and operational details for an Electric Vehicle Supply Equipment (EVSE) at a charging location."""
 type ChargingEVSEMetadataType {
-  """A connection to a list of available physical connectors on this EVSE, describing their types and capabilities."""
+  """A connection to a list of available physical connectors on this EVSE."""
   connectors: GenericConnectorConnectionTypeConnection
-  """A physical reference code or identifier for the EVSE, possibly its serial number or location ID."""
+  """A physical reference code or identifier for the EVSE, possibly its serial number."""
   physicalReference: String
   """A unique identifier for the EVSE."""
   pk: Int
-  """The current operational status of the EVSE (e.g., 'AVAILABLE', 'OCCUPIED', 'OUT_OF_ORDER')."""
-  status: String
-  """Indicates whether this EVSE supports initiating and managing charging sessions directly through a mobile application."""
+  """The current operational status of the EVSE (e.g., 'AVAILABLE', 'UNKNOWN')."""
+  status: EVSEStatus
+  """Indicates whether this EVSE supports initiating charging sessions via the app."""
   supportsInAppCharging: Boolean
 }
 
+"""Represents comprehensive metadata for a charging location (e.g., a charging station or hub)."""
 type ChargingLocationMetadataType {
+  """The physical street address of the charging location."""
   address: String
-  alerts: [String!]
-  capabilities: [Card!]
+  """Active alerts or notices regarding the location (e.g., out of order warnings)."""
+  alerts: [AlertType!]
+  """Supported payment and access methods (e.g., RFID, App, Contactless)."""
+  capabilities: [CapabilityType!]
+  """A unique string identifier for the charging location."""
   chargingLocationPk: String
+  """The city where the charging location is situated."""
   city: String
-  coordinates: ChargingLocationMetadataType
+  """The geographical coordinates (latitude and longitude) of the location."""
+  coordinates: PointJSON
+  """The country where the location is situated, usually as an ISO code."""
   country: String
+  """A connection to the EVSEs (charging posts/points) available at this location."""
   evses: GenericEVSEConnectionTypeConnection
+  """An external identifier, often a UUID used by the operator's backend."""
   externalId: String
-  facilities: [String!]
+  """A list of facilities available at the charging location (e.g., 'WIFI', 'CAFE')."""
+  facilities: [FacilityType!]
+  """Indicates if this location is part of the Electroverse network (EJN)."""
   isEjnLocation: Boolean
+  """Indicates if the user has marked this location as a favourite."""
   isFavourite: Boolean
-  locationFacilities: [String!]
+  """A list of facilities nearby the charging location."""
+  locationFacilities: [FacilityType!]
+  """The display name of the charging location."""
   name: String
+  """The opening hours for the charging location."""
   openingHours: BaseOpeningTimes
+  """The operator managing this charging location."""
   operator: LocationOperatorType
+  """A unique integer identifier for the charging location."""
   pk: Int
+  """The postal or zip code of the charging location."""
   postalCode: String
 }
 
+"""A pricing component that charges based on energy consumed (e.g., per kWh)."""
 type ConsumptionRate {
+  """Currency details including symbol and minor unit conversion."""
   currencyDetails: CurrencyType
+  """The unit of consumption (e.g., 'kWh')."""
   perUnit: String
+  """The cost per unit in minor currency units (e.g., pence or cents)."""
   unitAmount: Int
 }
 
+"""Details about a currency used for pricing."""
 type CurrencyType {
+  """The number of decimal digits the currency uses."""
   decimalDigits: Int
+  """The conversion factor from major to minor units (e.g., 100 for GBP to pence)."""
   minorUnitConversion: Int
+  """The display symbol for the currency (e.g., '£')."""
   symbol: String
 }
 
-type EJNConnectorStandardType {
-  humanName: String
+"""A union of all possible price components that make up the total cost of charging."""
+union PriceComponentType = ConsumptionRate | TimeRate | ParkingTimeRate | ConnectionFee | VAT
+
+"""A pricing component that charges based on time spent charging."""
+type TimeRate {
+  """Currency details including symbol and minor unit conversion."""
+  currencyDetails: CurrencyType
+  """The unit of time (e.g., '/min')."""
+  perUnit: String
+  """The cost per unit of time in minor currency units."""
+  unitAmount: Int
+}
+
+"""A pricing component that charges based on time spent parked, typically applied after charging is complete."""
+type ParkingTimeRate {
+  """Currency details including symbol and minor unit conversion."""
+  currencyDetails: CurrencyType
+  """The unit of time (e.g., '/min')."""
+  perUnit: String
+  """The cost per unit of time in minor currency units."""
+  unitAmount: Int
+}
+
+"""A fixed pricing component applied once per charging session connection."""
+type ConnectionFee {
+  """Currency details including symbol and minor unit conversion."""
+  currencyDetails: CurrencyType
+  """The fixed fee in minor currency units."""
+  unitAmount: Int
+}
+
+"""Represents the Value Added Tax component of the price."""
+type VAT {
+  __typename: String
+}
+
+"""An alert or notice related to a charging location."""
+type AlertType {
+  """The type of alert (e.g., 'INFO', 'WARNING')."""
+  type: AlertTypeEnum
+  """The descriptive content of the alert."""
+  content: String
+}
+
+"""A scalar representing geographical coordinates (latitude, longitude) in JSON format."""
+scalar PointJSON
+
+"""A union of all possible access or payment capabilities supported by a location."""
+union CapabilityType = EJNApp | OperatorApp | QRCode | RFID | TeslaCar | Card | Contactless | Free | Web | PlugAndCharge
+
+"""Indicates support for starting sessions via the Electroverse (EJN) app."""
+type EJNApp {
   name: String
+}
+
+"""Indicates support for starting sessions via the operator's specific app."""
+type OperatorApp {
+  androidAppUrl: String
+  iosAppUrl: String
+  name: String
+}
+
+"""Indicates support for starting sessions by scanning a QR code."""
+type QRCode {
+  name: String
+}
+
+"""Indicates support for starting sessions using an RFID card or fob."""
+type RFID {
+  name: String
+}
+
+"""Indicates support for Tesla vehicles (typically Superchargers)."""
+type TeslaCar {
+  name: String
+}
+
+"""Indicates support for contactless credit/debit card payments."""
+type Contactless {
+  name: String
+}
+
+"""Indicates that charging is completely free."""
+type Free {
+  name: String
+}
+
+"""Indicates support for web-based payment portals."""
+type Web {
+  name: String
+  site: String
+}
+
+"""Indicates support for Plug & Charge (ISO 15118) automatic authentication."""
+type PlugAndCharge {
+  name: String
+}
+
+"""Represents the physical standard of a connector (e.g., Type 2, CCS, CHAdeMO)."""
+type EJNConnectorStandardType {
+  """A human-readable name for the connector standard."""
+  humanName: String
+  """An internal identifier or enum name for the standard."""
+  name: String
+  """A unique identifier for the connector standard."""
   pk: Int
 }
 
-"""Represents a paginated list or connection of generic connector types available at an EVSE (Electric Vehicle Supply Equipment) at a charging location."""
+"""Represents a connection of generic connector types available at an EVSE."""
 type GenericConnectorConnectionTypeConnection {
-  """A list of edges, where each edge typically contains a single generic connector type node and potentially pagination information."""
+  """A list of edges containing connector nodes."""
   edges: [GenericConnectorConnectionTypeEdge!]
 }
 
+"""An edge wrapping a generic connector type node."""
 type GenericConnectorConnectionTypeEdge {
+  """The actual connector metadata."""
   node: ChargingConnectorMetadataType
 }
 
-"""This type represents a collection or a paginated list of EVSE (Electric Vehicle Supply Equipment) connection types available at a charging location."""
+"""This type represents a connection of EVSEs available at a charging location."""
 type GenericEVSEConnectionTypeConnection {
-  """A list of edges, where each edge typically contains information about a single EVSE connection type, often used for pagination."""
+  """A list of edges containing EVSE nodes."""
   edges: [GenericEVSEConnectionTypeEdge!]
-  """The total number of EVSE connection types in this collection."""
+  """The total number of EVSEs in this connection."""
   totalCount: Int
 }
 
-"""Represents an edge in a connection of Electric Vehicle Supply Equipment (EVSE) information, typically used in paginated queries to wrap individual EVSE nodes."""
+"""An edge wrapping an EVSE node."""
 type GenericEVSEConnectionTypeEdge {
-  """The actual EVSE metadata or details associated with this connection edge."""
+  """The actual EVSE metadata."""
   node: ChargingEVSEMetadataType
 }
 
-"""This type represents a charging location operator, providing details about the company that manages the charging stations."""
+"""This type represents a charging location operator."""
 type LocationOperatorType {
   """Indicates whether the operator has partnered locations."""
   hasPartneredLocations: Boolean
-  """Indicates whether the operator uses green or renewable energy for their charging services."""
+  """Indicates whether the operator uses green or renewable energy."""
   isGreenEnergy: Boolean
-  """The URL to the operator's logo, potentially for display on a dark background."""
+  """The URL to the operator's logo, optimized for dark backgrounds."""
   logoDark: String
   """The name of the charging location operator."""
   name: String
-  """A unique identifier for the charging location operator."""
+  """A unique identifier for the operator."""
   pk: Int
   """The customer support email address for the operator."""
   supportEmail: String
@@ -134,6 +294,172 @@ type LocationOperatorType {
   supportWebsite: String
 }
 
+"""Wrapper for pricing information and active discounts."""
 type PricingType {
-  discount: String
+  """An active discount offer applied to the pricing, if any."""
+  discount: OfferType
+}
+
+"""The different categories of discounts available."""
+enum DiscountVariety {
+  COUNTRY
+  GLOBAL
+  SUBSCRIPTION_OFFER
+}
+
+"""An interface representing a common structure for all discount offers."""
+interface OfferType {
+  """A unique GraphQL ID for the offer."""
+  id: ID!
+  """A unique integer identifier for the offer."""
+  pk: Int
+  """The display name of the offer or discount."""
+  name: String
+  """The category or variety of the discount."""
+  variety: DiscountVariety
+  """The rate of the discount (e.g., 0.15 for 15% off)."""
+  rate: Float
+  """The ISO datetime when the discount becomes valid."""
+  validFrom: String
+  """The ISO datetime when the discount expires."""
+  validTo: String
+}
+
+"""A discount that applies globally across the network."""
+type GlobalDiscountType implements OfferType {
+  id: ID!
+  pk: Int
+  name: String
+  variety: DiscountVariety
+  rate: Float
+  validFrom: String
+  validTo: String
+}
+
+"""A discount provided as part of a premium subscription offer."""
+type SubscriptionOfferDiscountType implements OfferType {
+  id: ID!
+  pk: Int
+  name: String
+  variety: DiscountVariety
+  rate: Float
+  validFrom: String
+  validTo: String
+}
+
+"""A minimal representation of an operator used for display purposes within discount contexts."""
+type DisplayOperatorType {
+  id: ID!
+  name: String
+}
+
+"""An edge wrapping a display operator node."""
+type DisplayOperatorTypeEdge {
+  cursor: String
+  node: DisplayOperatorType
+}
+
+"""A paginated connection of operators that are eligible for a specific discount."""
+type DisplayOperatorTypeConnection {
+  pageInfo: PageInfo
+  edges: [DisplayOperatorTypeEdge]
+}
+
+"""Pagination context information."""
+type PageInfo {
+  """Indicates if there are more items following the current page."""
+  hasNextPage: Boolean!
+  """Indicates if there are items preceding the current page."""
+  hasPreviousPage: Boolean!
+}
+
+"""A discount that applies to a specific country."""
+type CountryDiscountType implements OfferType {
+  id: ID!
+  pk: Int
+  name: String
+  variety: DiscountVariety
+  rate: Float
+  validFrom: String
+  validTo: String
+  """The country where this discount is valid."""
+  country: CountryType
+  """The internal type of marketing campaign for this discount."""
+  campaignType: CampaignType
+  """A paginated list of operators that participate in this country discount."""
+  displayOperators: DisplayOperatorTypeConnection
+}
+
+"""Represents geographical country metadata."""
+type CountryType {
+  id: ID!
+  """The two-letter ISO country code."""
+  alpha2: String
+  """The three-letter ISO country code."""
+  alpha3: String
+  """Indicates if new user signups are supported in this country."""
+  isSignupSupported: Boolean
+  """Indicates if physical items (like RFID cards) can be delivered here."""
+  isValidDeliveryLocation: Boolean
+  """The common name of the country."""
+  name: String
+  """The numeric ISO country code."""
+  numeric: String
+  """The official full name of the country."""
+  officialName: String
+}
+
+"""The payload returned after verifying an authentication token."""
+type VerifyTokenPayload {
+  """The decoded token payload or success confirmation."""
+  payload: String
+}
+
+"""The speed category of a connector."""
+enum ConnectorSpeed {
+  FAST
+  RAPID
+  SLOW
+  ULTRA
+}
+
+"""The operational status of an EVSE."""
+enum EVSEStatus {
+  AVAILABLE
+  BLOCKED
+  CHARGING
+  INOPERATIVE
+  OUTOFORDER
+  PLANNED
+  REMOVED
+  RESERVED
+  UNKNOWN
+}
+
+"""Facilities available at or near a charging location."""
+enum FacilityType {
+  COVERED
+  ENTERTAINMENT
+  FOOD_DRINK
+  LIGHTING
+  LODGING
+  NATURE
+  PARKING
+  PHONE_SIGNAL
+  RETAIL
+  TOILETS
+  TRANSPORT
+}
+
+"""The type of marketing campaign for a discount."""
+enum CampaignType {
+  OPERATOR_MARKETING
+  PLUNGE
+}
+
+"""The category of an alert."""
+enum AlertTypeEnum {
+  ALERT
+  DISCOUNT
+  REPORT
 }
