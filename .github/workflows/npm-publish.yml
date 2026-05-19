@@ -24,4 +24,4 @@ jobs:
       - run: npm run build --if-present
 
       - name: Publish to NPM
-        run: npm publish
+        run: NODE_AUTH_TOKEN="" npm publish
